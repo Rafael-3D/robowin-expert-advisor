@@ -1,0 +1,193 @@
+═══════════════════════════════════════════════════════════════
+   GUIA RÁPIDO - INSTALAÇÃO E USO DO ROBOWIN v3.00
+═══════════════════════════════════════════════════════════════
+
+🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
+🚨                                                           🚨
+🚨   ATENÇÃO: USE APENAS A VERSÃO 3.00!                      🚨
+🚨                                                           🚨
+🚨   A V2.00 tem bug CRÍTICO de Stop Loss invertido!         🚨
+🚨   Isso causa perdas financeiras inesperadas!              🚨
+🚨                                                           🚨
+🚨   Arquivo correto: RoboWIN_CORRIGIDO_V3.mq5               🚨
+🚨   NÃO USE: RoboWIN_CORRIGIDO.mq5 (V2.00)                  🚨
+🚨                                                           🚨
+🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
+
+
+📦 PASSO 1: INSTALAÇÃO
+──────────────────────
+
+1. Copie o arquivo "RoboWIN_CORRIGIDO_V3.mq5" para a pasta:
+   C:\Users\[SeuUsuário]\AppData\Roaming\MetaQuotes\Terminal\[ID]\MQL5\Experts\
+
+   ⚠️ IMPORTANTE: Use APENAS o arquivo V3!
+
+2. Abra o MetaEditor (F4 no MT5)
+
+3. Compile o arquivo (F7)
+
+4. Verifique se não há erros
+
+
+⚙️ PASSO 2: CONFIGURAÇÃO INICIAL
+─────────────────────────────────
+
+Configure os níveis de preço (ordem crescente, múltiplos de 5):
+
+┌─────────────────────────────────────┐
+│  pontoVenda2:  190300  ← Venda mais │
+│  pontoVenda1:  190100  ← agressiva  │
+│                                     │
+│  pontoCompra1: 189700               │
+│  pontoCompra2: 189500  ← Compra mais│
+└─────────────────────────────────────┘
+
+Gestão de risco:
+- takeProfit: 600 pontos
+- stopLoss: 200 pontos
+- breakEvenPontos: 350 pontos
+
+Horário:
+- horaInicio: "09:10"
+- horaFim: "17:30"
+
+Comportamento de ordens:
+- usarOrdemMercado: false (recomendado)
+  └─ false = só entra no preço exato (conservador)
+  └─ true  = entra a mercado se nível passou (agressivo)
+
+
+🧪 PASSO 3: TESTE EM CONTA DEMO
+────────────────────────────────
+
+1. Pressione Ctrl+R (Strategy Tester)
+
+2. Configure:
+   - EA: RoboWIN_CORRIGIDO_V3
+   - Símbolo: WING26
+   - Período: M1
+   - Modo: Every tick
+
+3. Clique em START
+
+4. Verifique os logs no Journal
+
+
+✅ PASSO 4: VALIDAÇÃO V3
+─────────────────────────
+
+Procure por estes logs de sucesso (NOVOS na V3):
+
+✓ "✅ BUY_LIMIT válido (preço limite < preço atual)"
+✓ "🔄 AJUSTANDO STOPS PARA PREÇO REAL..."
+✓ "✅ Stops ajustados com sucesso!"
+✓ "✅ TAKE PROFIT ATINGIDO (distância: X pts)"
+
+Se aparecer:
+✗ "❌ BUY_LIMIT inválido: preço limite deve ser < preço atual"
+→ Isso é CORRETO! V3 valida antes de enviar.
+
+
+🔍 DIFERENÇAS V2 vs V3
+──────────────────────
+
+┌────────────────┬────────────────────┬────────────────────┐
+│  Funcionalidade│  V2.00 ❌          │  V3.00 ✅          │
+├────────────────┼────────────────────┼────────────────────┤
+│  Stop Loss     │  Calculado errado  │  Ajustado após     │
+│                │  (preço da ordem)  │  execução real     │
+├────────────────┼────────────────────┼────────────────────┤
+│  Validação     │  Não valida        │  Valida antes      │
+│  de Ordens     │  (muitas rejeições)│  de enviar         │
+├────────────────┼────────────────────┼────────────────────┤
+│  Detecção      │  Qualquer lucro    │  Verifica          │
+│  TP/SL         │  = "TP Atingido"   │  proximidade real  │
+└────────────────┴────────────────────┴────────────────────┘
+
+
+📊 PARÂMETRO usarOrdemMercado
+──────────────────────────────
+
+Controla o que fazer quando o preço JÁ PASSOU do nível:
+
+┌─────────────────────────────────────────────────────────┐
+│  Exemplo: Nível compra = 187620, Preço atual = 187300   │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  usarOrdemMercado = false (🛡️ CONSERVADOR)              │
+│  └─ NÃO envia ordem, aguarda preço voltar               │
+│                                                         │
+│  usarOrdemMercado = true (⚡ AGRESSIVO)                 │
+│  └─ COMPRA A MERCADO em 187300                          │
+│  └─ ⚠️ Risco de slippage!                               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+
+💡 Recomendação: USE false (padrão) para maior segurança
+
+
+🚀 PASSO 5: OPERAÇÃO REAL
+──────────────────────────
+
+⚠️ ATENÇÃO: Só opere com dinheiro real após:
+
+1. Testar por pelo menos 1 semana em demo
+2. Confirmar que as ordens são executadas
+3. Verificar logs de AJUSTE DE STOPS (novidade V3)
+4. Validar que SL está ABAIXO da entrada (compra)
+
+
+📊 MONITORAMENTO V3
+────────────────────
+
+Durante a operação, verifique:
+
+1. Journal (logs do robô)
+2. Mensagem "Stops ajustados para preço real" ← NOVO V3
+3. SL sempre no lado correto da entrada
+4. Break even ativado
+
+
+⚠️ AVISOS IMPORTANTES
+──────────────────────
+
+✓ USE SEMPRE A VERSÃO 3.00 (V3)
+✓ NÃO USE a versão 2.00 (bugs críticos)
+✓ USE SEMPRE MÚLTIPLOS DE 5 nos níveis
+✓ TESTE EM DEMO PRIMEIRO
+✓ Verifique o mínimo do seu broker nos logs
+✓ Máximo de 2 stops por dia
+
+
+📞 SUPORTE
+───────────
+
+Problemas comuns:
+
+1. "BUY_LIMIT inválido"
+   → Comportamento CORRETO da V3
+   → Aguarde condições válidas
+
+2. "Invalid stops"
+   → Aumente stopLoss ou takeProfit
+
+3. "Stops ajustados" não aparece
+   → Verifique se está usando V3!
+
+
+📁 ARQUIVOS IMPORTANTES
+────────────────────────
+
+RoboWIN_CORRIGIDO_V3.mq5 ......... ✅ Código V3 (USE ESTE!)
+RoboWIN_CORRIGIDO.mq5 ............ ❌ Código V2 (NÃO USE!)
+README.md ........................ Documentação completa
+AVISOS_IMPORTANTES.md ............ Por que usar V3
+CHANGELOG.md ..................... Histórico de versões
+ANALISE_LOG.md ................... Análise dos bugs V2
+
+
+═══════════════════════════════════════════════════════════════
+         ⚠️ USE APENAS V3.00! ⚠️
+              BONS TRADES! 📈
+═══════════════════════════════════════════════════════════════
