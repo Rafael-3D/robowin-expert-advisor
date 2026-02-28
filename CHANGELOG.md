@@ -1,109 +1,106 @@
-# 📜 Changelog - RoboWIN
+# Changelog - RoboWIN
 
-Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
-
-O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
-e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+Todas as mudanças notáveis do projeto serão documentadas neste arquivo.
 
 ---
 
-## [3.00] - 2026-02-19 ⭐ ATUAL
+## [V3.21] - 2026-02-27
 
-### 🚨 CORREÇÕES CRÍTICAS
+### ⚠️ VERSÃO DE EMERGÊNCIA - Reverte V3.3
 
-#### Stop Loss Invertido (BUG CRÍTICO CORRIGIDO)
-- **Problema V2:** SL era calculado com base no preço da ordem limitada, não no preço real de execução
-- **Impacto:** SL ficava ACIMA da entrada em compras, causando stop imediato
-- **Solução:** Nova função `AjustarStopsAposExecucao()` recalcula SL/TP com preço real
+**Contexto:** A V3.3 apresentou bug crítico que causou preços incorretos nas ordens de compra (19395.0 ao invés de 193950.0), tornando o robô inoperante.
 
-#### Validação de Ordens Limitadas
-- **Problema V2:** Enviava ordens inválidas que eram rejeitadas (erro 10006)
-- **Impacto:** ~80% das ordens eram rejeitadas
-- **Solução:** Validação antes do envio:
-  - BUY_LIMIT: só se preço limite < preço atual
-  - SELL_LIMIT: só se preço limite > preço atual
+### Adicionado
+- ✅ Módulo de estatísticas (MFE/MAE) integrado da V3.3
+- ✅ Chamadas ao `Stats_OnOpen()`, `Stats_OnTick()`, `Stats_OnClose()`
+- ✅ Flags `jaLogouLimiteCompra` e `jaLogouLimiteVenda` para evitar logs repetitivos
 
-#### Detecção Correta de Resultados
-- **Problema V2:** Qualquer lucro > 0 era mostrado como "TP Atingido"
-- **Impacto:** Logs enganosos, dificultava análise
-- **Solução:** Verifica proximidade real (20 pontos) com TP/SL/BE
+### Removido
+- ❌ Validação de slippage/GAP da V3.3 (causou o bug)
+- ❌ Variáveis `precoOrdemCompraPendente` e `precoOrdemVendaPendente`
+- ❌ Parâmetro `toleranciaExecucao`
+- ❌ Campos `precoOrdemOriginal` e `execucaoValidada` da struct `InfoPosicao`
+- ❌ Função `ConfigurarFillingMode()` (desnecessária)
 
-### ➕ Adicionado
-- Função `AjustarStopsAposExecucao()` - ajusta SL/TP após execução real
-- Validação de preço limite vs preço atual antes de enviar ordem
-- Tolerância de 20 pontos para detecção de TP/SL
-- Logs detalhados de ajuste de stops
-- Variáveis de controle: `ordemCompraPendente`, `ordemVendaPendente`, `breakEvenAtivado`
-- **Parâmetro `usarOrdemMercado`** - controla comportamento quando nível já foi ultrapassado
-  - `false` (padrão): não envia ordem, aguarda preço voltar (conservador)
-  - `true`: executa ordem a mercado se nível passou (agressivo)
+### Corrigido
+- 🔧 Logs de "Máximo de tentativas" agora aparecem apenas UMA vez (não a cada tick)
+- 🔧 Base de código volta para V3.2 (estável e testada)
 
-### 🔧 Modificado
-- Lógica de cálculo de SL/TP movida para após execução
-- Detecção de resultado usa distância real, não apenas sinal do lucro
-- Logs incluem informações sobre ajustes realizados
-
-### 📊 Métricas
-- Ordens rejeitadas: 80% → ~5%
-- Precisão de detecção TP/SL: ~30% → ~98%
-- Risco de SL invertido: ALTO → ZERO
+### Arquivos
+- `RoboWIN_CORRIGIDO_V3.2.1.mq5` - **USAR ESTA VERSÃO**
+- `RoboWIN_CORRIGIDO_V3.3.mq5` - REJEITADA (bug crítico)
 
 ---
 
-## [2.00] - 2026-02-13 ⚠️ OBSOLETA
+## [V3.30] - 2026-02-26
 
-> ⚠️ **ATENÇÃO:** Esta versão contém bugs críticos. NÃO USE em conta real!
+### ⚠️ VERSÃO REJEITADA - Bug Crítico
 
-### ➕ Adicionado
-- Função `NormalizarPreco()` para tick size (múltiplos de 5)
-- Função `ValidarDistanciaStop()` para stops mínimos do broker
-- Logs detalhados em todas as operações
-- Validação automática de stops
+**Problema:** Bug na leitura de parâmetros causou preço errado nas ordens.
+- Preço configurado: 193950.0
+- Preço enviado: 19395.0 (falta um dígito!)
 
-### 🔧 Modificado
-- Parâmetros do `OrderOpen()` corrigidos (ordem dos argumentos)
+### Adicionado (mas com bug)
+- Validação de execução vs preço configurado
+- Tolerância máxima de slippage (20 pontos)
+- Armazenamento do preço original das ordens
+- Módulo de estatísticas (MFE/MAE)
 
-### ❌ Problemas Conhecidos (NÃO CORRIGIDOS na V2)
-- **CRÍTICO:** Stop Loss calculado com preço da ordem, não da execução
-- Ordens BUY_LIMIT enviadas com preço acima do mercado (rejeitadas)
-- Detecção incorreta de TP (qualquer lucro = TP)
+**NÃO USAR ESTA VERSÃO**
 
 ---
 
-## [1.03] - Anterior ❌ OBSOLETA
+## [V3.20] - 2026-02-24
 
-> ❌ **ATENÇÃO:** Versão com bugs graves. DESCONTINUADA.
+### ✅ VERSÃO ESTÁVEL - Base para V3.2.1
 
-### ❌ Problemas
-- Parâmetros do `OrderOpen()` invertidos
-- Sem normalização de preços (tick size)
-- Validação incompleta de stops
-- Ordens frequentemente rejeitadas
+### Adicionado
+- ✅ Flag `diaEncerrado` para controle rigoroso
+- ✅ BREAKEVEN encerra o dia (não permite nova entrada)
+- ✅ TAKE PROFIT encerra o dia
+- ✅ Apenas STOP LOSS permite nova entrada (se < 2)
 
----
-
-## Comparação Rápida
-
-| Versão | Status | Stop Loss | Validação Ordens | Detecção TP/SL |
-|--------|--------|-----------|------------------|----------------|
-| 3.00   | ✅ USAR | Correto | Completa | Correta |
-| 2.00   | ⚠️ NÃO | Invertido | Parcial | Incorreta |
-| 1.03   | ❌ NÃO | Incorreto | Nenhuma | Incorreta |
+### Corrigido
+- 🔧 Bug da V3.1 que permitia 3ª entrada após breakeven
+- 🔧 Lógica de `ResetarAposStop()` apenas para stop loss
 
 ---
 
-## Arquivos por Versão
+## [V3.00] - 2026-02-20
 
-| Versão | Arquivo | Usar? |
-|--------|---------|-------|
-| 3.00 | `RoboWIN_CORRIGIDO_V3.mq5` | ✅ SIM |
-| 2.00 | `RoboWIN_CORRIGIDO.mq5` | ❌ NÃO |
-| 1.03 | `RoboWIN.mq5` | ❌ NÃO |
+### Adicionado
+- Parâmetro `usarOrdemMercado` para controlar comportamento quando preço passa do nível
+- Validações de ordem limitada (BUY_LIMIT < preço atual, SELL_LIMIT > preço atual)
+- Ajuste automático de SL/TP após execução real
+- Diagnóstico detalhado de erros
 
 ---
 
-## Links Úteis
+## [V2.00] - 2026-02-15
 
-- [README.md](README.md) - Documentação principal
-- [AVISOS_IMPORTANTES.md](AVISOS_IMPORTANTES.md) - Por que usar V3
-- [ANALISE_LOG.md](ANALISE_LOG.md) - Análise detalhada dos bugs
+### Adicionado
+- Função `NormalizarPreco()` para múltiplos de 5 (tick size WIN)
+- Função `ValidarDistanciaStop()` para respeitar mínimos do broker
+- Logs detalhados para debug
+
+### Corrigido
+- Parâmetros invertidos em `OrderOpen()` (4 e 5)
+
+---
+
+## [V1.03] - 2026-02-10
+
+### Versão inicial
+- Lógica básica de entrada em níveis de compra/venda
+- Ordens limitadas
+- Stop Loss e Take Profit
+- Break Even
+
+---
+
+## Legenda
+
+- ✅ Adicionado/Funcionando
+- ❌ Removido/Não funciona
+- 🔧 Corrigido
+- ⚠️ Atenção/Aviso
