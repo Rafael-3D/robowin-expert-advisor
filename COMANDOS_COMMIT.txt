@@ -1,0 +1,54 @@
+# Comandos para commit da V3.2.1
+# Data: 27/02/2026
+# Motivo: Reverter V3.3 (bug crítico) e criar V3.2.1 (V3.2 + Stats)
+
+# ============================================
+# PASSO 1: Verificar status atual
+# ============================================
+git status
+
+# ============================================
+# PASSO 2: Adicionar arquivos novos/modificados
+# ============================================
+git add RoboWIN_CORRIGIDO_V3.2.1.mq5
+git add BUG_V3.3_ANALISE.md
+git add CHANGELOG.md
+git add COMANDOS_COMMIT.txt
+
+# ============================================
+# PASSO 3: Commit com mensagem descritiva
+# ============================================
+git commit -m "V3.21: Reverte V3.3 (bug crítico) e adiciona Stats
+
+PROBLEMA NA V3.3:
+- Bug causava preço errado nas ordens (19395.0 vs 193950.0)
+- Robô ficou inoperante no pregão de 27/02/2026
+- Ordem de compra rejeitada continuamente (Erro 10006)
+
+SOLUÇÃO (V3.2.1):
+- Base: V3.2 (última versão estável)
+- Mantém: Módulo Stats (MFE/MAE)
+- Remove: Validação de GAP/slippage da V3.3
+- Corrige: Logs repetitivos de 'Máximo de tentativas'
+
+ARQUIVOS:
+- RoboWIN_CORRIGIDO_V3.2.1.mq5 (USAR ESTA)
+- RoboWIN_CORRIGIDO_V3.3.mq5 (REJEITADA)
+- BUG_V3.3_ANALISE.md (documentação do bug)
+- CHANGELOG.md (atualizado)"
+
+# ============================================
+# PASSO 4: Push para o repositório
+# ============================================
+git push origin main
+
+# ============================================
+# ALTERNATIVA: Se quiser criar tag
+# ============================================
+git tag -a v3.2.1 -m "V3.2.1: Versão estável com Stats (reverte V3.3)"
+git push origin v3.2.1
+
+# ============================================
+# VERIFICAÇÃO FINAL
+# ============================================
+git log --oneline -5
