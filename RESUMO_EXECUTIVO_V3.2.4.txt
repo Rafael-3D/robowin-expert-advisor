@@ -1,0 +1,247 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    RESUMO EXECUTIVO - BUG V3.2.4                           ║
+║                      RoboWIN_CORRIGIDO_V3.2.4.mq5                          ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+🔴 BUG CRÍTICO IDENTIFICADO
+═══════════════════════════════════════════════════════════════════════════════
+
+O robô abre uma NOVA ORDEM após ganhar, violando a lógica fundamental.
+
+CASO REPRODUZIDO:
+  Trade #2: Ganho de +R$ 154 (TP por Trailing Stop)
+  Trade #3: Aberto logo após, perdeu R$ 42
+
+CAUSA: O código verifica o MOTIVO da saída (TP/SL/BE) mas não valida o
+       RESULTADO financeiro de forma absoluta. Se a posição fecha por
+       "outro motivo" (Trailing/Manual) com ganho, ele NÃO ENCERRA o dia.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+📍 RESPOSTA ÀS 4 PERGUNTAS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. FUNÇÃO QUE VERIFICA TRADE FECHADA?
+   ✅ VerificarResultadoPosicao() [Linha 1164-1291]
+      Chamada via OnTick() [Linha 227]
+      Detecção indireta quando posição desaparece
+
+2. COMO VERIFICA MOTIVO DE SAÍDA?
+   ✅ Análise por distância (20 pontos tolerância) [L.1184-1205]
+      - Se distância ao TP < 20 pts → TP
+      - Se distância ao SL < 20 pts → SL ou BE
+      - Senão → "Outro Fechamento" ⚠️ (BUG AQUI!)
+
+3. ONDE ESTÃO AS FLAGS?
+   ✅ Master Control: diaEncerrado [Linha 48]
+      Outros: stopsExecutados, compraExecutada, vendaExecutada,
+              breakEvenAtivado, nivelTrailing, etc [L.35-98]
+
+4. VARIÁVEL DE RESULTADO?
+   ✅ double profit [Linha 1173]
+      Extraída de: HistoryDealGetDouble(ticket, DEAL_PROFIT)
+      Contém: Ganho (+) ou Prejuízo (-) em reais R$
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🔍 ANÁLISE DA ESTRUTURA
+═══════════════════════════════════════════════════════════════════════════════
+
+FLUXO DE DETECÇÃO:
+  OnTick() [L.178]
+    ├─ [L.186-188] SE diaEncerrado → RETURN (bloqueio)
+    ├─ [L.208-215] Verifica se posição ainda existe
+    ├─ SE posição desapareceu:
+    │   └─ [L.227] Chama VerificarResultadoPosicao()
+    │       └─ [L.1173] Extrai profit = HistoryDealGetDouble(...)
+    │       └─ [L.1184-1205] Detecta motivo por distância
+    │       └─ [L.1207-1291] Executa lógica baseado no motivo
+    │           ├─ TP → diaEncerrado = true ✅
+    │           ├─ BE → diaEncerrado = true ✅
+    │           ├─ SL → incrementa contador, verifica limite ✅
+    │           └─ OUTRO → NÃO ALTERA diaEncerrado ❌ BUG!
+    │
+    └─ [L.235] MonitorarNiveisEntrada() executa
+        └─ [L.681-683] SE diaEncerrado → RETURN
+        └─ SENÃO → monitora e abre novas ordens
+
+
+LÓGICA DE MOTIVO (Linhas 1184-1205):
+  distanciaDoTP  = |precoFechamento - TP|
+  distanciaDoSL  = |precoFechamento - SL|
+  distanciaDoEntrada = |precoFechamento - Entrada|
+  tolerancia = 20 pontos
+
+  IF distanciaDoTP < 20 → foiTP = true
+  ELSE IF distanciaDoSL < 20 → foiSL = true (ou foiBE se breakEvenAtivado)
+  ELSE → motivo = "Manual", "Trailing", etc (ENTRA NO BUG!)
+
+
+DECISÃO POR MOTIVO (Linhas 1207-1291):
+  ┌─ L.1207: IF foiTP
+  │          └─ diaEncerrado = TRUE ✅ Encerra
+  │
+  ├─ L.1227: ELSE IF foiBE
+  │          └─ diaEncerrado = TRUE ✅ Encerra
+  │
+  ├─ L.1248: ELSE IF foiSL
+  │          ├─ stopsExecutados++
+  │          ├─ IF >= 2: diaEncerrado = TRUE ✅ Encerra
+  │          └─ ELSE: ResetarAposStop() ✅ Permite nova entrada
+  │
+  └─ L.1281: ELSE (Outro Fechamento)
+             ├─ Stats_OnClose() apenas
+             ├─ diaEncerrado NÃO ALTERADO ❌ BUG!
+             └─ Próximo OnTick permite nova entrada ❌
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🐛 O PROBLEMA EXATO
+═══════════════════════════════════════════════════════════════════════════════
+
+CÓDIGO PROBLEMÁTICO (Linhas 1281-1291):
+┌──────────────────────────────────────┐
+│ else {                               │
+│     Print("POSIÇÃO FECHADA");        │
+│     Stats_OnClose(profit, motivo);   │
+│ }                                    │
+│ // ❌ diaEncerrado NUNCA É ALTERADO! │
+│ // ❌ Mesmo com profit > 0            │
+└──────────────────────────────────────┘
+
+CENÁRIO DE FALHA:
+  1. Trade fecha com GANHO (+154) via Trailing Stop
+  2. distanciaDoTP = 450 pts > 20 → foiTP = FALSE
+  3. Entra no ELSE [L.1281]
+  4. diaEncerrado não é setado = continua FALSE
+  5. Próximo OnTick: diaEncerrado = FALSE → MonitorarNiveisEntrada() executa
+  6. NOVA ENTRADA ABERTA INCORRETAMENTE ❌
+
+RESULTADO:
+  Trade com ganho → Não ativa encerramento
+  Permite nova entrada → Possível prejuízo subsequente
+  Viola regra de negócio: "Ganho = encerra o dia"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+✅ SOLUÇÃO RECOMENDADA
+═══════════════════════════════════════════════════════════════════════════════
+
+OPÇÃO 1 - Mais Segura (Validação Absoluta no início):
+
+Adicione LOGO APÓS extrair profit [L.1173]:
+
+    if (profit > 0) {
+        Print("✅ GANHO DETECTADO - ENCERRANDO DIA");
+        diaEncerrado = true;
+        Stats_OnClose(profit, "GANHO_AUTO");
+        CancelarTodasOrdensPendentes();
+        EncerrarDia("Ganho realizado - Dia encerrado");
+        return;
+    }
+
+
+OPÇÃO 2 - Menos Invasiva (Corrige apenas o ELSE):
+
+Substitua Linhas 1281-1291:
+
+    else {
+        if (profit > 0) {
+            diaEncerrado = true;
+            EncerrarDia("Ganho realizado");
+        }
+        Stats_OnClose(profit, motivo);
+    }
+
+
+═══════════════════════════════════════════════════════════════════════════════
+📊 TABELA COMPARATIVA
+═══════════════════════════════════════════════════════════════════════════════
+
+SITUAÇÃO                     ESPERADO        V3.2.4 ATUAL    STATUS
+─────────────────────────────────────────────────────────────────────────────
+TP exato (+600)              Encerra ✅      Encerra ✅      OK
+SL #1 (-200)                 Permite novo    Permite novo    OK
+TP com breakeven             Encerra ✅      Encerra ✅      OK
+SL #2 (-200)                 Encerra ✅      Encerra ✅      OK
+Trailing Stop com +450       Encerra ✅      CONTINUA ❌     🔴 BUG
+Manual Close com +300        Encerra ✅      CONTINUA ❌     🔴 BUG
+
+
+═══════════════════════════════════════════════════════════════════════════════
+🎯 CHECKLIST TÉCNICO
+═══════════════════════════════════════════════════════════════════════════════
+
+Função de Detecção:
+  ✅ Localizada: VerificarResultadoPosicao() [L.1164]
+  ✅ Chamada por: OnTick() [L.227]
+  ✅ Tipo: Indireta (monitora desaparecimento)
+  ✅ Frequency: A cada tick
+
+Lógica de Motivo:
+  ✅ Método: Distância até TP/SL/Entrada
+  ✅ Tolerância: 20 pontos
+  ✅ Cenários: TP, SL, BE, Outro
+  ❌ Problema: Cenário "Outro" não valida resultado
+
+Flags de Controle:
+  ✅ Master: diaEncerrado [L.48]
+  ✅ Contador: stopsExecutados [L.38]
+  ✅ Bloqueios: 2 (OnTick L.186 + MonitorarNíveis L.681)
+  ✅ Lógica: Funciona corretamente se diaEncerrado for setado
+
+Variável de Resultado:
+  ✅ Extração: HistoryDealGetDouble(ticket, DEAL_PROFIT)
+  ✅ Localização: [L.1173]
+  ✅ Tipo: double (em reais)
+  ✅ Uso: Parcialmente (não valida em cenário "Outro")
+
+Bug Identificado:
+  ✅ Localização: [L.1281-1291] Outro Fechamento
+  ✅ Causa: diaEncerrado não é setado
+  ✅ Impacto: CRÍTICO (viola lógica fundamental)
+  ✅ Reproduzível: SIM (qualquer Trailing/Manual com ganho)
+
+Solução:
+  ✅ 2 opções propostas (ambas válidas)
+  ✅ Implementação: < 5 linhas de código
+  ✅ Testes: Necessário em conta demo
+
+
+═══════════════════════════════════════════════════════════════════════════════
+📝 PRÓXIMAS AÇÕES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. ✅ Análise Concluída
+   └─ 4 documentos técnicos gerados
+   └─ Bug identificado e documentado
+   └─ 2 soluções propostas
+
+2. ⏳ Implementação da Correção (V3.2.5)
+   └─ Adicionar validação de profit
+   └─ Testes em demo account
+   └─ Validar Trade #2 não gera Trade #3
+
+3. ⏳ Validação
+   └─ Verificar diaEncerrado é setado após ganho
+   └─ Confirmar MonitorarNiveisEntrada retorna no bloqueio
+   └─ Testar cenários: TP, BE, SL #1, SL #2
+
+4. ⏳ Deploy
+   └─ Nova versão V3.2.5 em produção
+   └─ Monitorar histórico de trades via Stats
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SEVERIDADE: 🔴 CRÍTICA
+IMPACTO: Viola regra fundamental (ganho = encerramento do dia)
+STATUS: ✅ DOCUMENTADO - Pronto para correção
+TEMPO ESTIMADO: 30 min (análise + implementação + testes)
+
+DATA: 2026-04-02
+ANALISADOR: DeepAgent
+VERSÃO: V3.2.4 (RoboWIN_CORRIGIDO_V3.2.4.mq5)
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,30 @@
+[33mcommit 1f72f183c87e3a844364419bb5af0f665f64383e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Rafael-3D <164706077+Rafael-3D@users.noreply.github.com>
+Date:   Thu Mar 26 07:58:27 2026 -0300
+
+    V3.2.4 = Terminal Limpo + Flexibilidade
+    ✅ Benefícios:
+    
+    Terminal limpo em operação normal (redução de 95% nos logs)
+    Só mostra eventos importantes (ordens, posições, trailing, stops)
+    Modo debug disponível quando precisar investigar
+    Todas as funcionalidades anteriores mantidas
+    Margem otimizada (filtro de proximidade)
+    Proteções ativas (kill switch, validação de ticks, etc)
+    📊 Números:
+    
+    Antes: ~360 logs por dia
+    Agora: ~6-10 logs por dia (eventos importantes)
+    Redução: 95% 🎉
+
+[33mcommit eb850e2f9472d45caa96fa4c599337310e957790[m
+Author: Rafael-3D <164706077+Rafael-3D@users.noreply.github.com>
+Date:   Sat Feb 28 11:18:39 2026 -0300
+
+    fix(v3.2.1): Reverte V3.3 e cria V3.2.1 estável
+
+[33mcommit 58d00464f7192f0f9de36ce6934d629a770ef52e[m
+Author: Rafael-3D <164706077+Rafael-3D@users.noreply.github.com>
+Date:   Mon Feb 23 12:50:24 2026 -0300
+
+    Initial commit - RoboWIN Expert Advisor
